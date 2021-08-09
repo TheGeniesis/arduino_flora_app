@@ -21,12 +21,7 @@ void setup() {
 void loop() {
     
   if (t % ONE_MINUTE == 0) {  
-    // lux is an one lumen per square meter
-    Lux = TSL2591_Read_Lux();
-    Serial.print("Lux = ");
-    Serial.print(Lux);
-    Serial.print("\r\n");
-    TSL2591_SET_LuxInterrupt(50, 200);
+    int lux = getLightSensorResult();
   }
 
   if (t == 100) {
@@ -35,6 +30,15 @@ void loop() {
   t++;
 
   delay(1000);
+}
+
+inf getLightSensorResult() {
+  // lux is an one lumen per square meter
+  Lux = TSL2591_Read_Lux();
+  Serial.print("Lux = ");
+  Serial.print(Lux);
+  Serial.print("\r\n");
+  TSL2591_SET_LuxInterrupt(50, 200);
 }
 
 void connectWithWifi() {
