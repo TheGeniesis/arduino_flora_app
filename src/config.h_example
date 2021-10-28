@@ -1,4 +1,5 @@
 #define WIFI_SSID = ""
 #define WIFI_PASS = ""
-#define API_SERVER_HOST "192.168.1.148"
-#define API_SERVER_PORT 8002
+#define MQTT_SERVER_URL ""
+#define MQTT_USER ""
+#define MQTT_PASSWORD ""
