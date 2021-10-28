@@ -16,7 +16,31 @@ PubSubClient mqttClient(client);
 int t = 0;
 int ONE_MINUTE = 60;
 
+int getCurrentWaterAmount() {
+  //get fron sensor
+  return 100;
+}
 
+void watering(int waterAmount) {
+  int amountBefore = getCurrentWaterAmount();
+  while (10 < getCurrentWaterAmount() && (amountBefore - waterAmount) >= getCurrentWaterAmount()) {
+    // Send signal to start watering
+      Serial.print("Watering...");
+
+    delay(1000);
+  }
+}
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+
+  StaticJsonDocument<200> doc;
+  deserializeJson(doc, payload);
+
+  watering(doc["waterAmount"]);
+}
 
 void connectWithWifi() {
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -42,12 +66,14 @@ void reconnect() {
     // Attempt to connect
     if (mqttClient.connect("dev.dawe ", mqtt_user, mqtt_pass)) {
       Serial.println("connected");
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(mqttClient.state());
-      Serial.println(" try again in 5 seconds");
-      delay(5000);
+      mqttClient.subscribe("amq_topic.watering");
+      return; 
     }
+
+    Serial.print("failed, rc=");
+    Serial.print(mqttClient.state());
+    Serial.println(" try again in 5 seconds");
+    delay(5000);
   }
 }
 
@@ -56,11 +82,15 @@ void setup() {
 
   connectWithWifi();
   mqttClient.setServer(mqtt_server, 1883);
+  mqttClient.setCallback(callback);
+
 
   // TSL2591_Init();
 }
 
 void loop() {    
+  mqttClient.loop();
+
   if (!client.connected()) {
     reconnect();
   }
@@ -81,8 +111,8 @@ void loop() {
   doc["humility"] = 0;
   doc["light"] = 0;
   doc["temperature"] = 0;
-  doc["water_level"] = 0;
-  doc["device_id"] = "4b08f72d-ea82-45c7-b4ae-8e9452201ab1";
+  doc["water_level"] = getCurrentWaterAmount();
+  doc["device_id"] = DEVICE_ID;
   char buffer[256];
   size_t n = serializeJson(doc, buffer);
 
@@ -93,11 +123,8 @@ void loop() {
 
 
 
-
   delay(1000);
 }
-
-
 
 
 // int getLightSensorResult() {
