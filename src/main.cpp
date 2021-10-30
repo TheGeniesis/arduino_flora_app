@@ -3,7 +3,23 @@
 #include "config.h"
 #include "ArduinoJson.h"
 #include "PubSubClient.h"
- 
+#include "SPI.h"
+#include <Adafruit_Sensor.h>
+#include <DHT.h>
+#include <DHT_U.h>
+#include <Wire.h>
+#include "Adafruit_TSL2591.h"
+
+#define DHTTYPE DHT22     // DHT 22 (AM2302)
+#define DHTPIN D6 
+
+Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the sensor identifier (for your use later)
+
+int MOISUREPIN = D2;
+int WATERPIN = D5;
+
+DHT_Unified dht(DHTPIN, DHTTYPE);
+
 const char* mqtt_server = MQTT_SERVER_URL; 
 const char* mqtt_user = MQTT_USER;
 const char* mqtt_pass = MQTT_PASSWORD;
@@ -17,9 +33,73 @@ int t = 0;
 int ONE_MINUTE = 60;
 
 int getCurrentWaterAmount() {
-  //get fron sensor
-  return 100;
+  return analogRead(WATERPIN);
 }
+
+
+float getTemperature() {
+  // Get temperature event and print its value.
+  sensors_event_t event;
+  dht.temperature().getEvent(&event);
+  if (isnan(event.temperature)) {
+    Serial.println(F("Error reading temperature!"));
+
+    return 0;
+  }
+
+  Serial.print(F("Temperature: "));
+  Serial.print(event.temperature);
+  Serial.println(F("°C"));
+
+  return event.temperature;
+}
+
+float getLight() {
+  // You can change the gain on the fly, to adapt to brighter/dimmer light situations
+  //tsl.setGain(TSL2591_GAIN_LOW);    // 1x gain (bright light)
+  tsl.setGain(TSL2591_GAIN_MED);      // 25x gain
+  //tsl.setGain(TSL2591_GAIN_HIGH);   // 428x gain
+  
+  // Changing the integration time gives you a longer time over which to sense light
+  // longer timelines are slower, but are good in very low light situtations!
+  //tsl.setTiming(TSL2591_INTEGRATIONTIME_100MS);  // shortest integration time (bright light)
+  // tsl.setTiming(TSL2591_INTEGRATIONTIME_200MS);
+  tsl.setTiming(TSL2591_INTEGRATIONTIME_300MS);
+  // tsl.setTiming(TSL2591_INTEGRATIONTIME_400MS);
+  // tsl.setTiming(TSL2591_INTEGRATIONTIME_500MS);
+  // tsl.setTiming(TSL2591_INTEGRATIONTIME_600MS);  // longest integration time (dim light)
+
+  /* Get a new sensor event */ 
+  sensors_event_t event;
+  tsl.getEvent(&event);
+ 
+  /* Display the results (light is measured in lux) */
+  Serial.print(F("[ ")); Serial.print(event.timestamp); Serial.print(F(" ms ] "));
+  if ((event.light == 0) |
+      (event.light > 4294966000.0) | 
+      (event.light <-4294966000.0))
+  {
+    /* If event.light = 0 lux the sensor is probably saturated */
+    /* and no reliable data could be generated! */
+    /* if event.light is +/- 4294967040 there was a float over/underflow */
+    Serial.println(F("Invalid data (adjust gain or timing)"));
+    return 0;
+
+  }
+
+  Serial.print(event.light); Serial.println(F(" lux"));
+  
+  return event.light;
+}
+
+
+int getMoisure()
+{
+  return analogRead(MOISUREPIN);
+}
+
+
+
 
 void watering(int waterAmount) {
   int amountBefore = getCurrentWaterAmount();
@@ -74,6 +154,7 @@ void reconnect() {
     Serial.print(mqttClient.state());
     Serial.println(" try again in 5 seconds");
     delay(5000);
+    
   }
 }
 
@@ -84,8 +165,7 @@ void setup() {
   mqttClient.setServer(mqtt_server, 1883);
   mqttClient.setCallback(callback);
 
-
-  // TSL2591_Init();
+  tsl.begin();
 }
 
 void loop() {    
@@ -109,8 +189,8 @@ void loop() {
   doc["message_id"] = "test";
   doc["date"] = "2021-10-25T16:08:57.264Z";
   doc["humility"] = 0;
-  doc["light"] = 0;
-  doc["temperature"] = 0;
+  doc["light"] = getLight();
+  doc["temperature"] = getTemperature();
   doc["water_level"] = getCurrentWaterAmount();
   doc["device_id"] = DEVICE_ID;
   char buffer[256];
@@ -120,19 +200,6 @@ void loop() {
   mqttClient.publish("amq_topic.measurement", buffer, n);
   Serial.println("Stop: Publishing a data from sensors...");
 
-
-
-
   delay(1000);
 }
 
-
-// int getLightSensorResult() {
-//   // lux is an one lumen per square meter
-//   Lux = TSL2591_Read_Lux();
-//   Serial.print("Lux = ");
-//   Serial.println(Lux);
-//   TSL2591_SET_LuxInterrupt(50, 200);
-
-//   return Lux;
-// }

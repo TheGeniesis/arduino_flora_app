@@ -15,4 +15,8 @@ Remember to set Serial.begin(9600); In code and serial monitor
 
 For the light sensor do not plug INT port
 
-To get an IP address for MQTT, run `hostname -I` command. The first IP address is the right one.
+To get an IP address for MQTT,  run `hostname -I` command. The first IP address is the right one.
+
+
+https://learn.adafruit.com/dht/connecting-to-a-dhtxx-sensor
+https://forum.arduino.cc/t/missing-resistor-parts/624556
