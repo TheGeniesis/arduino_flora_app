@@ -11,12 +11,14 @@
 #include "Adafruit_TSL2591.h"
 
 #define DHTTYPE DHT22     // DHT 22 (AM2302)
-#define DHTPIN D6 
+#define DHTPIN D2
 
 Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the sensor identifier (for your use later)
 
-int MOISUREPIN = D2;
-int WATERPIN = D5;
+#define MOISUREPIN A0
+#define WATERPIN A0
+#define VCC_WATERPIN D0
+#define VCC_MOISUREPIN D1
 
 DHT_Unified dht(DHTPIN, DHTTYPE);
 
@@ -32,24 +34,39 @@ PubSubClient mqttClient(client);
 int t = 0;
 int ONE_MINUTE = 60;
 
-int getCurrentWaterAmount() {
-  return analogRead(WATERPIN);
+float getCurrentWaterAmount() {
+  digitalWrite(VCC_WATERPIN, HIGH);
+  delay(1000);
+  
+  float result = analogRead(WATERPIN);
+  digitalWrite(VCC_WATERPIN, LOW);
+    delay(1000);
+
+  return result;
 }
 
+float getMoisure()
+{
+  digitalWrite(VCC_MOISUREPIN, HIGH);
+  delay(1000);
+
+  float result = analogRead(MOISUREPIN);
+  digitalWrite(VCC_MOISUREPIN, LOW);
+  delay(1000);
+
+  return result;
+}
 
 float getTemperature() {
   // Get temperature event and print its value.
   sensors_event_t event;
   dht.temperature().getEvent(&event);
+
   if (isnan(event.temperature)) {
     Serial.println(F("Error reading temperature!"));
 
     return 0;
   }
-
-  Serial.print(F("Temperature: "));
-  Serial.print(event.temperature);
-  Serial.println(F("°C"));
 
   return event.temperature;
 }
@@ -74,7 +91,6 @@ float getLight() {
   tsl.getEvent(&event);
  
   /* Display the results (light is measured in lux) */
-  Serial.print(F("[ ")); Serial.print(event.timestamp); Serial.print(F(" ms ] "));
   if ((event.light == 0) |
       (event.light > 4294966000.0) | 
       (event.light <-4294966000.0))
@@ -86,23 +102,12 @@ float getLight() {
     return 0;
 
   }
-
-  Serial.print(event.light); Serial.println(F(" lux"));
   
   return event.light;
 }
 
-
-int getMoisure()
-{
-  return analogRead(MOISUREPIN);
-}
-
-
-
-
 void watering(int waterAmount) {
-  int amountBefore = getCurrentWaterAmount();
+  float amountBefore = getCurrentWaterAmount();
   while (10 < getCurrentWaterAmount() && (amountBefore - waterAmount) >= getCurrentWaterAmount()) {
     // Send signal to start watering
       Serial.print("Watering...");
@@ -153,7 +158,7 @@ void reconnect() {
     Serial.print("failed, rc=");
     Serial.print(mqttClient.state());
     Serial.println(" try again in 5 seconds");
-    delay(5000);
+    delay(1000);
     
   }
 }
@@ -175,20 +180,10 @@ void loop() {
     reconnect();
   }
 
-
-  if (t % ONE_MINUTE == 0) {  
-  //  int lux = getLightSensorResult();
-  }
-
-  if (t == 100) {
-    t=0;
-  }
-  t++;
-
   DynamicJsonDocument doc(1024);
   doc["message_id"] = "test";
   doc["date"] = "2021-10-25T16:08:57.264Z";
-  doc["humility"] = 0;
+  doc["humility"] = getMoisure();
   doc["light"] = getLight();
   doc["temperature"] = getTemperature();
   doc["water_level"] = getCurrentWaterAmount();
@@ -196,8 +191,10 @@ void loop() {
   char buffer[256];
   size_t n = serializeJson(doc, buffer);
 
+  Serial.println(buffer);
+
   Serial.println("Start: Publishing a data from sensors...");
-  mqttClient.publish("amq_topic.measurement", buffer, n);
+  // mqttClient.publish("amq_topic.measurement", buffer, n);
   Serial.println("Stop: Publishing a data from sensors...");
 
   delay(1000);
