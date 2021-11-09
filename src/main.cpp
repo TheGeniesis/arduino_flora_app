@@ -9,16 +9,17 @@
 #include <DHT_U.h>
 #include <Wire.h>
 #include "Adafruit_TSL2591.h"
+#include <Adafruit_MCP3008.h>
 
 #define DHTTYPE DHT22     // DHT 22 (AM2302)
 #define DHTPIN D2
 
 Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the sensor identifier (for your use later)
 
-#define MOISUREPIN A0
-#define WATERPIN A0
-#define VCC_WATERPIN D0
-#define VCC_MOISUREPIN D1
+Adafruit_MCP3008 adc;
+
+#define MOISURE_CHANNEL 5
+#define WATER_PIN A0
 
 DHT_Unified dht(DHTPIN, DHTTYPE);
 
@@ -35,31 +36,18 @@ int t = 0;
 int ONE_MINUTE = 60;
 
 float getCurrentWaterAmount() {
-  digitalWrite(VCC_WATERPIN, HIGH);
-  delay(1000);
-  
-  float result = analogRead(WATERPIN);
-  digitalWrite(VCC_WATERPIN, LOW);
-    delay(1000);
-
-  return result;
+  return analogRead(WATER_PIN);
 }
 
 float getMoisure()
 {
-  digitalWrite(VCC_MOISUREPIN, HIGH);
-  delay(1000);
-
-  float result = analogRead(MOISUREPIN);
-  digitalWrite(VCC_MOISUREPIN, LOW);
-  delay(1000);
-
-  return result;
+  return adc.readADC(MOISURE_CHANNEL);
 }
 
 float getTemperature() {
   // Get temperature event and print its value.
   sensors_event_t event;
+  delay(3000);
   dht.temperature().getEvent(&event);
 
   if (isnan(event.temperature)) {
@@ -75,6 +63,7 @@ float getLight() {
   // You can change the gain on the fly, to adapt to brighter/dimmer light situations
   //tsl.setGain(TSL2591_GAIN_LOW);    // 1x gain (bright light)
   tsl.setGain(TSL2591_GAIN_MED);      // 25x gain
+  //tsl.setGain(TSL2591_GAIN_HIGH);   // 428x gain
   //tsl.setGain(TSL2591_GAIN_HIGH);   // 428x gain
   
   // Changing the integration time gives you a longer time over which to sense light
@@ -170,6 +159,7 @@ void setup() {
   mqttClient.setServer(mqtt_server, 1883);
   mqttClient.setCallback(callback);
 
+  adc.begin();
   tsl.begin();
 }
 
