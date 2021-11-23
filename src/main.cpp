@@ -12,7 +12,7 @@
 #include <Adafruit_MCP3008.h>
 
 #define DHTTYPE DHT22     // DHT 22 (AM2302)
-#define DHTPIN D2
+#define DHTPIN D3
 
 Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the sensor identifier (for your use later)
 
@@ -36,12 +36,19 @@ int t = 0;
 int ONE_MINUTE = 60;
 
 float getCurrentWaterAmount() {
-  return analogRead(WATER_PIN);
+
+    int map_low = 0;
+    int map_high = 460;
+
+    return map(analogRead(WATER_PIN), map_low, map_high, 0, 100);
 }
 
 float getMoisure()
 {
-  return adc.readADC(MOISURE_CHANNEL);
+  int map_low = 0;
+  int map_high = 380;
+
+  return map(adc.readADC(MOISURE_CHANNEL), map_low, map_high, 0, 100);
 }
 
 float getTemperature() {
@@ -155,15 +162,19 @@ void reconnect() {
 void setup() {
   Serial.begin(9600);
 
+  digitalWrite(D8, LOW);
+  pinMode(D8, OUTPUT);
+
   connectWithWifi();
   mqttClient.setServer(mqtt_server, 1883);
   mqttClient.setCallback(callback);
 
+  dht.begin();
   adc.begin();
   tsl.begin();
 }
 
-void loop() {    
+void loop() {  
   mqttClient.loop();
 
   if (!client.connected()) {
