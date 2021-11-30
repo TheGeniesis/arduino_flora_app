@@ -1,4 +1,3 @@
-// #include "Adafruit_TSL2591.h"
 #include "ESP8266WiFi.h"
 #include "config.h"
 #include "ArduinoJson.h"
@@ -12,35 +11,66 @@
 #include <Adafruit_MCP3008.h>
 
 #define DHTTYPE DHT22     // DHT 22 (AM2302)
-#define DHTPIN D3
-
-Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the sensor identifier (for your use later)
-
-Adafruit_MCP3008 adc;
-
+#define DHTPIN D5
+#define PUMP_DIGITAL_PIN D8
 #define MOISURE_CHANNEL 5
 #define WATER_PIN A0
 
-DHT_Unified dht(DHTPIN, DHTTYPE);
+const int POMP_SPEED_SEC = 18; // 18ml/sec
+const int WATER_BOX_SIZE  = 300;
+const int WATER_SENSOR_MAX = 460;
 
 const char* mqtt_server = MQTT_SERVER_URL; 
 const char* mqtt_user = MQTT_USER;
 const char* mqtt_pass = MQTT_PASSWORD;
 
+Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the sensor identifier (for your use later)
+Adafruit_MCP3008 adc;
+DHT_Unified dht(DHTPIN, DHTTYPE);
 WiFiClient client;
 PubSubClient mqttClient(client);
-
 
 // UWORD Lux = 0;
 int t = 0;
 int ONE_MINUTE = 60;
 
 float getCurrentWaterAmount() {
+    delay(500);
+    float signalValue = analogRead(WATER_PIN);
+    delay(500);
+    signalValue = signalValue + analogRead(WATER_PIN);
+    delay(500);
+    signalValue = (signalValue + analogRead(WATER_PIN))/3;
+    
+    int percentValue = 0;
+    
+    if (signalValue <= 250) {
+      percentValue = 0;
+    } else if (signalValue <= 370) {
+      percentValue = 10;
+    } else if (signalValue <= 385) {
+      percentValue = 10;
+    } else if (signalValue <= 400) {
+      percentValue = 20;
+    } else if (signalValue <= 420) {
+      percentValue = 30;
+    } else if (signalValue <= 430) {
+      percentValue = 40;
+    } else if (signalValue <= 452) {
+      percentValue = 50;
+    } else if (signalValue <= 457) {
+      percentValue = 60;
+    } else if (signalValue <= 462) {
+      percentValue = 70;
+    } else if (signalValue <= 465) {
+      percentValue = 80;
+    } else if (signalValue <= 470) {
+      percentValue = 90;
+    } else {
+      percentValue = 100;
+    } 
 
-    int map_low = 0;
-    int map_high = 460;
-
-    return map(analogRead(WATER_PIN), map_low, map_high, 0, 100);
+    return percentValue * WATER_BOX_SIZE / 100;
 }
 
 float getMoisure()
@@ -54,8 +84,8 @@ float getMoisure()
 float getTemperature() {
   // Get temperature event and print its value.
   sensors_event_t event;
-  delay(3000);
   dht.temperature().getEvent(&event);
+  delay(4000);
 
   if (isnan(event.temperature)) {
     Serial.println(F("Error reading temperature!"));
@@ -104,12 +134,13 @@ float getLight() {
 
 void watering(int waterAmount) {
   float amountBefore = getCurrentWaterAmount();
-  while (10 < getCurrentWaterAmount() && (amountBefore - waterAmount) >= getCurrentWaterAmount()) {
-    // Send signal to start watering
-      Serial.print("Watering...");
-
-    delay(1000);
+  digitalWrite(PUMP_DIGITAL_PIN, HIGH);
+  int tries = 0;
+  float loopLimit = waterAmount/POMP_SPEED_SEC + 2;
+  while (10 < getCurrentWaterAmount() && (amountBefore - waterAmount) >= getCurrentWaterAmount() && tries <= loopLimit) {
+    tries++;
   }
+  digitalWrite(PUMP_DIGITAL_PIN, LOW);
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -162,8 +193,8 @@ void reconnect() {
 void setup() {
   Serial.begin(9600);
 
-  digitalWrite(D8, LOW);
-  pinMode(D8, OUTPUT);
+  digitalWrite(PUMP_DIGITAL_PIN, LOW);
+  pinMode(PUMP_DIGITAL_PIN, OUTPUT);
 
   connectWithWifi();
   mqttClient.setServer(mqtt_server, 1883);
@@ -181,9 +212,20 @@ void loop() {
     reconnect();
   }
 
+  int waterAmount=100;
+  float amountBefore = getCurrentWaterAmount();
+  digitalWrite(PUMP_DIGITAL_PIN, HIGH);
+  int tries = 0;
+  float loopLimit = waterAmount/POMP_SPEED_SEC + 2;
+  while (10 < getCurrentWaterAmount() && (amountBefore - waterAmount) >= getCurrentWaterAmount() && tries <= loopLimit) {
+    delay(500);
+    tries++;
+  }
+  digitalWrite(PUMP_DIGITAL_PIN, LOW);
+
   DynamicJsonDocument doc(1024);
   doc["message_id"] = "test";
-  doc["date"] = "2021-10-25T16:08:57.264Z";
+  doc["date"] = "date";
   doc["humility"] = getMoisure();
   doc["light"] = getLight();
   doc["temperature"] = getTemperature();
@@ -193,7 +235,6 @@ void loop() {
   size_t n = serializeJson(doc, buffer);
 
   Serial.println(buffer);
-
   Serial.println("Start: Publishing a data from sensors...");
   // mqttClient.publish("amq_topic.measurement", buffer, n);
   Serial.println("Stop: Publishing a data from sensors...");
