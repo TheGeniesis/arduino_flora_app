@@ -212,17 +212,6 @@ void loop() {
     reconnect();
   }
 
-  int waterAmount=100;
-  float amountBefore = getCurrentWaterAmount();
-  digitalWrite(PUMP_DIGITAL_PIN, HIGH);
-  int tries = 0;
-  float loopLimit = waterAmount/POMP_SPEED_SEC + 2;
-  while (10 < getCurrentWaterAmount() && (amountBefore - waterAmount) >= getCurrentWaterAmount() && tries <= loopLimit) {
-    delay(500);
-    tries++;
-  }
-  digitalWrite(PUMP_DIGITAL_PIN, LOW);
-
   DynamicJsonDocument doc(1024);
   doc["message_id"] = "test";
   doc["date"] = "date";
