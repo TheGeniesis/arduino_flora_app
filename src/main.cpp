@@ -39,17 +39,16 @@ void setup()
   lightBegin();
 
   waitForSync();
-	myTZ.setLocation(F("pl"));
+  myTZ.setLocation(F("pl"));
 }
 
 void loop()
 {
   mqttLoop();
-	Serial.println();
-
+  Serial.println();
 
   DynamicJsonDocument doc(1024);
-  doc["message_id"] = "test";
+  doc["message_id"] = random(123456789);
   doc["date"] = myTZ.dateTime("Y-m-d H:i:s");
   doc["humility"] = getMoisure();
   doc["light"] = getLight();
