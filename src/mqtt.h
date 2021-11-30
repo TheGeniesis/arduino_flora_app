@@ -8,7 +8,6 @@ const char *mqtt_pass = MQTT_PASSWORD;
 
 
 #define PUMP_DIGITAL_PIN D8
-#define MOISURE_CHANNEL 5
 #define WATER_PIN A0
 
 const int POMP_SPEED_SEC = 18; // 18ml/sec
@@ -114,18 +113,9 @@ void setupMqtt()
 {
   digitalWrite(PUMP_DIGITAL_PIN, LOW);
   pinMode(PUMP_DIGITAL_PIN, OUTPUT);
+
   mqttClient.setServer(mqtt_server, 1883);
   mqttClient.setCallback(callback);
-}
-
-void mqttLoop()
-{
-  mqttClient.loop();
-
-  if (!client.connected())
-  {
-    reconnect();
-  }
 }
 
 void reconnect()
@@ -147,6 +137,16 @@ void reconnect()
     Serial.print(mqttClient.state());
     Serial.println(" try again in 5 seconds");
     delay(1000);
+  }
+}
+
+void mqttLoop()
+{
+  mqttClient.loop();
+
+  if (!client.connected())
+  {
+    reconnect();
   }
 }
 

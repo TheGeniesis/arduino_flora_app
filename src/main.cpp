@@ -12,6 +12,8 @@
 
 Adafruit_MCP3008 adc;
 
+#define MOISURE_CHANNEL 5
+
 // UWORD Lux = 0;
 int t = 0;
 int ONE_MINUTE = 60;
@@ -19,7 +21,7 @@ int ONE_MINUTE = 60;
 float getMoisure()
 {
   int map_low = 0;
-  int map_high = 380;
+  int map_high = 560;
 
   return map(adc.readADC(MOISURE_CHANNEL), map_low, map_high, 0, 100);
 }
