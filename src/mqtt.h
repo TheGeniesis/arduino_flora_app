@@ -6,7 +6,6 @@ const char *mqtt_server = MQTT_SERVER_URL;
 const char *mqtt_user = MQTT_USER;
 const char *mqtt_pass = MQTT_PASSWORD;
 
-
 #define PUMP_DIGITAL_PIN D8
 #define WATER_PIN A0
 
@@ -15,7 +14,6 @@ const int WATER_BOX_SIZE = 300;
 const int WATER_SENSOR_MAX = 460;
 
 PubSubClient mqttClient(client);
-
 
 float getCurrentWaterAmount()
 {
@@ -80,20 +78,13 @@ float getCurrentWaterAmount()
   return percentValue * WATER_BOX_SIZE / 100;
 }
 
-
 void watering(int waterAmount)
 {
-  float amountBefore = getCurrentWaterAmount();
+  float wateringTime = waterAmount / POMP_SPEED_SEC;
   digitalWrite(PUMP_DIGITAL_PIN, HIGH);
-  int tries = 0;
-  float loopLimit = waterAmount / POMP_SPEED_SEC + 2;
-  while (10 < getCurrentWaterAmount() && (amountBefore - waterAmount) >= getCurrentWaterAmount() && tries <= loopLimit)
-  {
-    tries++;
-  }
+  delay(wateringTime);
   digitalWrite(PUMP_DIGITAL_PIN, LOW);
 }
-
 
 void callback(char *topic, byte *payload, unsigned int length)
 {
@@ -106,8 +97,6 @@ void callback(char *topic, byte *payload, unsigned int length)
 
   watering(doc["waterAmount"]);
 }
-
-
 
 void setupMqtt()
 {

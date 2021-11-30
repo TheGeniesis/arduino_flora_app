@@ -6,11 +6,12 @@
 #include "light_sensor.h"
 #include "ArduinoJson.h"
 #include "SPI.h"
-
+#include <ezTime.h>
 #include <Wire.h>
 #include <Adafruit_MCP3008.h>
 
 Adafruit_MCP3008 adc;
+Timezone myTZ;
 
 #define MOISURE_CHANNEL 5
 
@@ -36,15 +37,20 @@ void setup()
   dhtBegin();
   adc.begin();
   lightBegin();
+
+  waitForSync();
+	myTZ.setLocation(F("pl"));
 }
 
 void loop()
 {
   mqttLoop();
+	Serial.println();
+
 
   DynamicJsonDocument doc(1024);
   doc["message_id"] = "test";
-  doc["date"] = "date";
+  doc["date"] = myTZ.dateTime("Y-m-d H:i:s");
   doc["humility"] = getMoisure();
   doc["light"] = getLight();
   doc["temperature"] = getTemperature();
