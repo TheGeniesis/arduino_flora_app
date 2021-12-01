@@ -80,7 +80,7 @@ float getCurrentWaterAmount()
 
 void watering(int waterAmount)
 {
-  float wateringTime = waterAmount / POMP_SPEED_SEC;
+  float wateringTime = 1 + waterAmount / POMP_SPEED_SEC;
   digitalWrite(PUMP_DIGITAL_PIN, HIGH);
   delay(wateringTime);
   digitalWrite(PUMP_DIGITAL_PIN, LOW);
@@ -139,9 +139,9 @@ void mqttLoop()
   }
 }
 
-void mqttPublish(const char *topic, const uint8_t *payload, unsigned int plength, boolean retained)
+void mqttPublish(const char* topic, const char* payload, unsigned int plength)
 {
   Serial.println("Start: Publishing a data from sensors...");
-  // mqttClient.publish("amq_topic.measurement", buffer, n);
+  mqttClient.publish("amq_topic.measurement", payload, plength);
   Serial.println("Stop: Publishing a data from sensors...");
 }

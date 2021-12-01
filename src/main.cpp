@@ -15,7 +15,6 @@ Timezone myTZ;
 
 #define MOISURE_CHANNEL 5
 
-// UWORD Lux = 0;
 int t = 0;
 int ONE_MINUTE = 60;
 
@@ -35,7 +34,6 @@ void setup()
   setupMqtt();
 
   dhtBegin();
-  adc.begin();
   lightBegin();
 
   waitForSync();
@@ -45,7 +43,7 @@ void setup()
 void loop()
 {
   mqttLoop();
-  Serial.println();
+  adc.begin();
 
   DynamicJsonDocument doc(1024);
   doc["message_id"] = random(123456789);
@@ -59,7 +57,7 @@ void loop()
   size_t n = serializeJson(doc, buffer);
 
   Serial.println(buffer);
-  // mqttPublish("amq_topic.measurement", buffer, n)
+  mqttClient.publish("amq_topic.measurement", buffer, n);
 
-  delay(1000);
+  delay(10000);
 }
