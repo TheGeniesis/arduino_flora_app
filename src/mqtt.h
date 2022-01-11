@@ -103,7 +103,7 @@ void setupMqtt()
   digitalWrite(PUMP_DIGITAL_PIN, LOW);
   pinMode(PUMP_DIGITAL_PIN, OUTPUT);
 
-  mqttClient.setServer(mqtt_server, 1883);
+  mqttClient.setServer(mqtt_server, 31883);
   mqttClient.setCallback(callback);
 }
 
